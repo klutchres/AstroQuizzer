@@ -50,9 +50,6 @@ public class Spaceship : MonoBehaviour
     public AudioSource HitSource;
     public AudioClip[] hitClips;
     [Space]
-    public AudioSource[] musicSources;
-    public AudioClip[] musicClips;
-    [Space]
     public GameObject fuelUI;
     public Image fuelBar;
     public float fuelBarLerp = 2;
@@ -91,7 +88,6 @@ public class Spaceship : MonoBehaviour
     Rigidbody rb;
     float targetFOV = 60, speed, targetScale = 1.0f, currentFuel, qT;
 
-    List<AudioSource> msources;
     bool m_moving, m_boost;
     bool paused;
     bool failed;
@@ -109,17 +105,16 @@ public class Spaceship : MonoBehaviour
         initCam = cam.transform.localPosition;
         rb = GetComponent<Rigidbody>();
         targetFOV = defaultFOV;
+    }
+
+    void Start()
+    {
+        BoostSource.clip = boostClip;
         bT = boostDuration;
         currentFuel = startingFuel;
         qT = MainHost.f_Random(questionIntervalRange.x, questionIntervalRange.y);
-
-        msources = new List<AudioSource>();
-        for (int i = 0; i < musicClips.Length; i++)
-        {
-            musicSources[i].clip = musicClips[i];
-            msources.Add(musicSources[i]);
-        }
     }
+
     float h;
     void FixedUpdate()
     {
@@ -148,7 +143,7 @@ public class Spaceship : MonoBehaviour
         fuelUI.SetActive(!paused && !failed && intialised && !m_holdTime);
         LowFuelUI.SetActive(!paused && currentFuel <= lowFuelThreshold && !failed && !m_holdTime);
         FailedUI.SetActive(failed && !paused);
-        SceneManager._instance.restartOnClick = failed;
+        if (SceneManager._instance.flying) SceneManager._instance.restartOnClick = failed;
         if (modifyVelocity) rb.velocity = modV;
         camLockPar.constraintActive = !intialised;
         camLockRot.constraintActive = intialised;
@@ -165,9 +160,7 @@ public class Spaceship : MonoBehaviour
 
             //Camera's Position & Movement
             if (camPivot & cam)
-            {
                 camPivot.position = Vector3.Lerp(camPivot.position, camPivotPoint.position, Time.deltaTime * camLerpSpeed);
-            }
 
             //Camera's Field Of View
             targetFOV = !m_holdTime ? (MainHost.f_BalanceValues(maxSpeed, speed, 0, movingFOV, defaultFOV)) + (m_boost ? (boostFOV) : 0) : heldFOV;
@@ -212,7 +205,7 @@ public class Spaceship : MonoBehaviour
             else bCT -= Time.deltaTime;
 
             //Time Scale
-            targetScale = failed ? 0 : paused ? 0 : !m_holdTime ? 1.0f : holdTimeScale;
+            targetScale = SceneManager._instance.flying ? failed ? 0 : paused ? 0 : !m_holdTime ? 1.0f : holdTimeScale : 1.0f;
             Time.timeScale = Mathf.SmoothDamp(Time.timeScale, targetScale, ref tRef, timeLerp * Time.deltaTime);
 
             //Cursor
@@ -227,12 +220,20 @@ public class Spaceship : MonoBehaviour
             currentFuel -= Time.deltaTime * fuelConsumptionSpeed * (m_boost ? fuelBoostConsumptionMultiplier : 1);
 
             //Audio
-            if (!EngineSource.isPlaying) { EngineSource.playOnAwake = true; if(!EngineSource.isPlaying) EngineSource.Play(); EngineSource.loop = true; }
+            if (!EngineSource.isPlaying)
+            {
+                EngineSource.playOnAwake = true;
+                if (!EngineSource.isPlaying)
+                {
+                    EngineSource.Play();
+                    EngineSource.loop = true;
+                }
+            }
             float targetPitch = MainHost.f_BalanceValues(maxSpeed, speed, 0, pitchMax, pitchMin) + (m_boost ? 0.2f : 0);
             EngineSource.pitch = Mathf.Lerp(EngineSource.pitch, targetPitch, Time.deltaTime * pitchLerpSpeed);
-            BoostSource.clip = boostClip; if (!BoostSource.isPlaying) { BoostSource.Play(); } BoostSource.loop = true;
+            if (!BoostSource.isPlaying) BoostSource.Play(); 
+            BoostSource.loop = true;
             BoostSource.volume = Mathf.Lerp(BoostSource.volume, m_boost ? 1f : 0, Time.deltaTime * (m_boost ? 5 : 1)); 
-            foreach(var s in msources) { s.volume = Mathf.Lerp(s.volume, (!paused && !m_holdTime) ? 0.375f : 0.1f, Time.deltaTime * 3.5f); if (!s.isPlaying) s.Play(); s.loop = true; }
         }
     }
     void OnDrawGizmos() { if (drawGizmos) Gizmos.color = Color.red; Gizmos.DrawLine(Vector3.forward * -maxZ, Vector3.forward * maxZ); }

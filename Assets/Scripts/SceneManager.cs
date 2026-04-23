@@ -7,6 +7,7 @@ using UnityEngine.Playables;
 using System.Configuration;
 using Boo.Lang;
 using UnityEditor;
+using UnityEngine.Rendering;
 
 public class SceneManager : MonoBehaviour
 {
@@ -35,7 +36,10 @@ public class SceneManager : MonoBehaviour
     [Space]
     public GameObject[] FlightObjects;
     public GameObject[] LandObjects;
-
+    [Space]
+    public AudioLowPassFilter musicSource;
+    public float cutOffLerpSpeed = 1;
+    public float cutOffAmount_Lobby = 100, cutOffAmount_Game = 650;
     Vector3 camStartPos, camStartRot;
 
     Camera cam;
@@ -49,6 +53,13 @@ public class SceneManager : MonoBehaviour
         camStartRot = camPos.localEulerAngles;
     }
 
+    void Start()
+    {
+           
+    }
+
+    float targetCutoff;
+    float targetVolume;
     float a;
     void Update()
     {
@@ -67,6 +78,12 @@ public class SceneManager : MonoBehaviour
             PlayCutScene(3);
             Pilot._instance.gameObject.SetActive(false);
         }
+
+        // Sound Track
+        targetVolume = Mathf.Lerp(targetVolume, !flying ? 0.5f : (Spaceship._instance.GetPause() || Spaceship._instance.m_holdTime) ? 0.1f : 0.375f, Time.deltaTime * 3.5f);
+        targetCutoff = Mathf.Lerp(targetCutoff, !flying ? cutOffAmount_Lobby : (Spaceship._instance.GetPause() || Spaceship._instance.m_holdTime) ? cutOffAmount_Game : 22000, Time.deltaTime * cutOffLerpSpeed);
+        musicSource.GetComponent<AudioSource>().volume = targetVolume;
+        musicSource.cutoffFrequency = targetCutoff;
 
         if (!flying)
         {

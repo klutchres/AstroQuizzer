@@ -16,6 +16,9 @@ public class uestionManager : MonoBehaviour
     public Text opt1, opt2, opt3, opt4;
     [Space]
     public GameObject QuestionUI;
+    public AudioSource source;
+    public AudioClip correctClip;
+    public AudioClip wrongClip;
 
     [HideInInspector] public static uestionManager instance;
     void Awake()
@@ -25,13 +28,17 @@ public class uestionManager : MonoBehaviour
 
     void Fail()
     {
-        //playSFX
+        //Play SFX
+        source.clip = wrongClip; source.Play();
+
         open = false;
     }
 
     void Pass()
     {
-        //playSFX
+        // Play SFX
+        source.clip = correctClip; source.Play();
+
         open = false;
         Spaceship._instance.IncrementFuel();
     }
